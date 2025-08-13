@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.0.0] - 2025-08-13
+
+### Added
+
 - Initial project setup with TypeScript configuration
 - Basic project structure and build system
 - MIT license and package configuration
