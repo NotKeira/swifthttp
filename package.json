@@ -1,0 +1,48 @@
+{
+  "name": "swifthttp",
+  "version": "1.0.0",
+  "description": "A lightweight, high-performance HTTP server for Node.js. Built for speed and simplicity without sacrificing advanced features. TypeScript-first with zero dependencies.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "prepublichOnly": "pnpm run clean && pnpm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "http",
+    "server",
+    "lightweight",
+    "fast",
+    "typescript",
+    "node",
+    "api",
+    "microservice"
+  ],
+  "author": "Keira Hopkins <node-pkgs@accounts.keira.boo> (https://keirahopkins.co.uk)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NotKeira/swifthttp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/NotKeira/swifthttp/issues",
+    "email": "node-issues@keirahopkins.co.uk"
+  },
+  "homepage": "https://github.com/NotKeira/swifthttp#readme",
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "packageManager": "pnpm@10.14.0",
+  "devDependencies": {
+    "@types/node": "^24.2.1",
+    "typescript": "^5.9.2"
+  }
+}
