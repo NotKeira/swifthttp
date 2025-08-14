@@ -1,6 +1,4 @@
 import { IncomingMessage, ServerResponse } from "http";
-import { getSystemErrorMap } from "util";
-import { cors } from "../middleware";
 
 /**
  * HTTP method types
@@ -51,13 +49,39 @@ export type Middleware = (
 ) => void | Promise<void>;
 
 /**
- * Route definition
+ * Parameter validator function
+ */
+export type ParamValidator = (value: string) => boolean | Promise<boolean>;
+
+/**
+ * Enhanced route definition with regex support
  */
 export interface Route {
   method: HttpMethod;
-  path: string;
+  path: string | RegExp;
   handler: RouteHandler;
   middleware?: Middleware[];
+  params?: Record<string, ParamValidator>;
+}
+
+/**
+ * Route group configuration
+ */
+export interface RouteGroup {
+  prefix: string;
+  middleware: Middleware[];
+  routes: Route[];
+}
+
+/**
+ * Route debugging information
+ */
+export interface RouteInfo {
+  method: HttpMethod;
+  path: string | RegExp;
+  middlewareCount: number;
+  hasParams: boolean;
+  paramNames: string[];
 }
 
 /**
@@ -79,21 +103,6 @@ export type ErrorHandler = (
   res: SwiftResponse,
   next: () => void
 ) => void;
-
-/**
- * Custom SwiftHTTP error class
- */
-export class SwiftError extends Error {
-  constructor(
-    public override message: string,
-    public statusCode: number = 500,
-    public code?: string
-  ) {
-    super(message);
-    this.name = "SwiftError";
-    Error.captureStackTrace?.(this, SwiftError);
-  }
-}
 
 /**
  * Middleware options for different types
@@ -123,3 +132,18 @@ export interface MiddlewareOptions {
  * Middleware factory type
  */
 export type MiddlewareFactory<T = any> = (options?: T) => Middleware;
+
+/**
+ * Custom SwiftHTTP error class
+ */
+export class SwiftError extends Error {
+  constructor(
+    public override message: string,
+    public statusCode: number = 500,
+    public code?: string
+  ) {
+    super(message);
+    this.name = "SwiftError";
+    Error.captureStackTrace?.(this, SwiftError);
+  }
+}
