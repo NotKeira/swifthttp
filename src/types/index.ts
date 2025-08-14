@@ -1,4 +1,6 @@
 import { IncomingMessage, ServerResponse } from "http";
+import { getSystemErrorMap } from "util";
+import { cors } from "../middleware";
 
 /**
  * HTTP method types
@@ -92,3 +94,32 @@ export class SwiftError extends Error {
     Error.captureStackTrace?.(this, SwiftError);
   }
 }
+
+/**
+ * Middleware options for different types
+ */
+export interface MiddlewareOptions {
+  cors?: {
+    origin?: string | string[];
+    methods?: string[];
+    allowedHeaders?: string[];
+    credentials?: boolean;
+  };
+  bodyParser?: {
+    urlencoded?: boolean;
+    limit?: string;
+  };
+  logger?: {
+    format?: "dev" | "combined";
+  };
+  static?: {
+    root: string;
+    index?: string;
+    dotfiles?: "allow" | "deny" | "ignore";
+  };
+}
+
+/**
+ * Middleware factory type
+ */
+export type MiddlewareFactory<T = any> = (options?: T) => Middleware;

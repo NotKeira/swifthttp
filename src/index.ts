@@ -19,7 +19,7 @@ import { enhanceResponse } from "./utils/response";
 export class SwiftHTTP {
   private readonly server: Server;
   private readonly routes: Route[] = [];
-  private readonly middleware: Middleware[] = [];
+  private middleware: Middleware[] = [];
   private errorHandler: ErrorHandler | null = null;
 
   constructor(private readonly options: ServerOptions = {}) {
@@ -82,6 +82,62 @@ export class SwiftHTTP {
    */
   setErrorHandler(handler: ErrorHandler): void {
     this.errorHandler = handler;
+  }
+
+  /**
+   * Add multiple middleware at once
+   */
+  useMany(middlewares: Middleware[]): void {
+    this.middleware.push(...middlewares);
+  }
+
+  /**
+   * Add middleware with error handling
+   */
+  useWithErrorHandler(middleware: Middleware): void {
+    const wrappedMiddleware: Middleware = async (req, res, next) => {
+      try {
+        await middleware(req, res, next);
+      } catch (error) {
+        await this.handleError(error as Error, req, res);
+      }
+    };
+    this.middleware.push(wrappedMiddleware);
+  }
+
+  /**
+   * Create a route group with shared middleware
+   */
+  group(prefix: string, middleware: Middleware[], routes: () => void): void {
+    const originalRoutes = [...this.routes];
+
+    // Temporarily store middlewares
+    const originalMiddleware = [...this.middleware];
+
+    this.middleware.push(...middleware);
+
+    // Execute route definitions
+    routes();
+
+    const newRoutes = this.routes.slice(originalRoutes.length);
+    newRoutes.forEach((route) => {
+      route.path = prefix + route.path;
+      route.middleware = [...middleware, ...(route.middleware || [])];
+    });
+
+    this.middleware = originalMiddleware;
+  }
+
+  /**
+   * Add route with specific middleware
+   */
+  addRouteWithMiddleware(
+    method: HttpMethod,
+    path: string,
+    middleware: Middleware[],
+    handler: RouteHandler
+  ): void {
+    this.routes.push({ method, path, handler, middleware });
   }
 
   /**
@@ -178,20 +234,36 @@ export class SwiftHTTP {
     req: SwiftRequest,
     res: SwiftResponse
   ): Promise<void> {
-    for (const middleware of middlewares) {
+    let index = 0;
+
+    const dispatch = async (i: number): Promise<void> => {
+      if (i <= index) {
+        throw new Error("next() called multiple times");
+      }
+      index = i;
+
+      if (i >= middlewares.length) {
+        return; // All middleware already executed lol!
+      }
+
+      const middleware = middlewares[i];
       let nextCalled = false;
 
       const next = () => {
+        if (nextCalled) {
+          throw new Error("next() called multiple times");
+        }
         nextCalled = true;
+        return dispatch(i + 1);
       };
-
       await middleware(req, res, next);
 
-      // If next() wasn't called, stop the middleware chain
-      if (!nextCalled) {
-        break;
+      // if next() wasnt called and response isnt sent, stop the entire chain!
+      if (!nextCalled && !res.headersSent) {
+        return;
       }
-    }
+    };
+    await dispatch(0);
   }
 
   /**
