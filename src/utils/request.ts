@@ -1,37 +1,245 @@
 import { IncomingMessage } from "http";
 import { parse as parseUrl } from "url";
 import { SwiftRequest } from "../types";
+import { parseLimit } from "./helpers";
 
 /**
- * Parse request body as JSON
+ * Parse request body with size limits and content type detection
  */
-export async function parseJsonBody(req: IncomingMessage): Promise<any> {
-  return new Promise((resolve, reject) => {
-    let body = "";
+export async function parseRequestBody(
+  req: IncomingMessage,
+  options: {
+    limit?: string;
+    json?: boolean;
+    urlencoded?: boolean;
+    text?: boolean;
+    raw?: boolean;
+  } = {}
+): Promise<any> {
+  const {
+    limit = "1mb",
+    json = true,
+    urlencoded = true,
+    text = true,
+    raw = false,
+  } = options;
 
-    req.on("data", (chunk) => {
-      body += chunk.toString();
+  const limitBytes = parseLimit(limit);
+  const contentType = req.headers["content-type"] || "";
+  const contentLength = parseInt(req.headers["content-length"] || "0", 10);
+
+  // Check content length against limit
+  if (contentLength > limitBytes) {
+    throw new Error(
+      `Request entity too large. Content-Length: ${contentLength}, Limit: ${limitBytes}`
+    );
+  }
+
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let totalSize = 0;
+
+    req.on("data", (chunk: Buffer) => {
+      totalSize += chunk.length;
+
+      // Check size limit
+      if (totalSize > limitBytes) {
+        reject(
+          new Error(
+            `Request entity too large. Size: ${totalSize}, Limit: ${limitBytes}`
+          )
+        );
+        return;
+      }
+
+      chunks.push(chunk);
     });
 
     req.on("end", () => {
       try {
-        if (!body.trim()) {
+        if (chunks.length === 0) {
           resolve(null);
           return;
         }
 
-        const contentType = req.headers["content-type"] || "";
-        if (contentType.includes("application/json")) {
-          resolve(JSON.parse(body));
-        } else {
-          resolve(body);
+        const buffer = Buffer.concat(chunks);
+
+        // Return raw buffer if requested
+        if (raw) {
+          resolve(buffer);
+          return;
         }
-      } catch {
-        reject(new Error("Invalid JSON in request body"));
+
+        const bodyString = buffer.toString("utf8");
+
+        // Parse based on content type
+        if (json && contentType.includes("application/json")) {
+          resolve(JSON.parse(bodyString));
+        } else if (
+          urlencoded &&
+          contentType.includes("application/x-www-form-urlencoded")
+        ) {
+          const params = new URLSearchParams(bodyString);
+          resolve(Object.fromEntries(params.entries()));
+        } else if (text && contentType.startsWith("text/")) {
+          resolve(bodyString);
+        } else if (contentType.includes("multipart/form-data")) {
+          // Will be handled by parseMultipartData
+          resolve(buffer);
+        } else {
+          // Default to string for unknown types
+          resolve(bodyString);
+        }
+      } catch (error) {
+        reject(new Error(`Body parsing error: ${(error as Error).message}`));
       }
     });
 
-    req.on("error", reject);
+    req.on("error", (error) => {
+      reject(new Error(`Request error: ${error.message}`));
+    });
+
+    // Set timeout for slow requests
+    const timeout = setTimeout(() => {
+      reject(new Error("Request timeout"));
+    }, 30000); // 30 second timeout
+
+    req.on("end", () => clearTimeout(timeout));
+    req.on("error", () => clearTimeout(timeout));
+  });
+}
+
+/**
+ * Split buffer by boundary
+ */
+function splitBufferByBoundary(buffer: Buffer, boundary: string): Buffer[] {
+  const boundaryBuffer = Buffer.from("--" + boundary);
+  const parts = [];
+  let start = 0;
+
+  while (true) {
+    const boundaryIndex = buffer.indexOf(boundaryBuffer, start);
+    if (boundaryIndex === -1) break;
+
+    if (start !== 0) {
+      parts.push(buffer.subarray(start, boundaryIndex));
+    }
+    start = boundaryIndex + boundaryBuffer.length;
+  }
+
+  return parts;
+}
+
+/**
+ * Parse Content-Disposition header
+ */
+function parseContentDisposition(
+  headerString: string
+): { fieldName: string; filename?: string } | null {
+  const dispositionMatch = RegExp(
+    /Content-Disposition:\s*form-data;\s*name="([^"]+)"(?:;\s*filename="([^"]*)")?/i
+  ).exec(headerString);
+
+  if (!dispositionMatch) return null;
+
+  return {
+    fieldName: dispositionMatch[1],
+    filename: dispositionMatch[2],
+  };
+}
+
+/**
+ * Parse Content-Type header
+ */
+function parseContentType(headerString: string): string {
+  const contentTypeMatch = RegExp(/Content-Type:\s*([^\r\n]+)/i).exec(
+    headerString
+  );
+  return contentTypeMatch
+    ? contentTypeMatch[1].trim()
+    : "application/octet-stream";
+}
+
+/**
+ * Process a single multipart part
+ */
+function processPart(
+  part: Buffer,
+  fields: Record<string, string>,
+  files: Array<{
+    name: string;
+    filename?: string;
+    mimetype?: string;
+    data: Buffer;
+  }>
+): void {
+  const headerEnd = part.indexOf("\r\n\r\n");
+  if (headerEnd === -1) return;
+
+  const headerString = part.subarray(0, headerEnd).toString();
+  const bodyBuffer = part.subarray(headerEnd + 4);
+
+  const disposition = parseContentDisposition(headerString);
+  if (!disposition) return;
+
+  const { fieldName, filename } = disposition;
+
+  if (filename !== undefined) {
+    const mimetype = parseContentType(headerString);
+    files.push({
+      name: fieldName,
+      filename: filename,
+      mimetype: mimetype,
+      data: bodyBuffer,
+    });
+  } else {
+    fields[fieldName] = bodyBuffer.toString("utf8");
+  }
+}
+
+/**
+ * Parse multipart/form-data (simplified implementation)
+ */
+export function parseMultipartData(
+  buffer: Buffer,
+  boundary: string
+): {
+  fields: Record<string, string>;
+  files: Array<{
+    name: string;
+    filename?: string;
+    mimetype?: string;
+    data: Buffer;
+  }>;
+} {
+  const fields: Record<string, string> = {};
+  const files: Array<{
+    name: string;
+    filename?: string;
+    mimetype?: string;
+    data: Buffer;
+  }> = [];
+
+  const parts = splitBufferByBoundary(buffer, boundary);
+
+  for (const part of parts) {
+    if (part.length > 0) {
+      processPart(part, fields, files);
+    }
+  }
+
+  return { fields, files };
+}
+
+/**
+ * Parse request body as JSON (legacy function, kept for compatibility)
+ */
+export async function parseJsonBody(req: IncomingMessage): Promise<any> {
+  return parseRequestBody(req, {
+    json: true,
+    urlencoded: false,
+    text: false,
+    raw: false,
   });
 }
 
@@ -59,8 +267,111 @@ export function parseRequest(req: IncomingMessage): {
 }
 
 /**
- * Match route path with request path and extract parameters
+ * Validate request based on content type and size
  */
+export function validateRequest(
+  req: IncomingMessage,
+  options: {
+    allowedContentTypes?: string[];
+    maxSize?: string;
+    requireContentType?: boolean;
+  } = {}
+): { valid: boolean; error?: string } {
+  const {
+    allowedContentTypes = [
+      "application/json",
+      "application/x-www-form-urlencoded",
+      "text/plain",
+      "multipart/form-data",
+    ],
+    maxSize = "10mb",
+    requireContentType = false,
+  } = options;
+
+  const contentType = req.headers["content-type"] || "";
+  const contentLength = parseInt(req.headers["content-length"] || "0", 10);
+
+  // Check if content type is required
+  if (requireContentType && !contentType) {
+    return { valid: false, error: "Content-Type header is required" };
+  }
+
+  // Check allowed content types
+  if (
+    contentType &&
+    !allowedContentTypes.some((allowed) => contentType.includes(allowed))
+  ) {
+    return { valid: false, error: `Content-Type '${contentType}' not allowed` };
+  }
+
+  // Check content length
+  const maxSizeBytes = parseLimit(maxSize);
+  if (contentLength > maxSizeBytes) {
+    return {
+      valid: false,
+      error: `Content-Length exceeds maximum size of ${maxSize}`,
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Enhanced request object enhancement with comprehensive body parsing
+ */
+export async function enhanceRequest(
+  req: IncomingMessage,
+  parsingOptions?: {
+    limit?: string;
+    json?: boolean;
+    urlencoded?: boolean;
+    text?: boolean;
+    raw?: boolean;
+    multipart?: boolean;
+  }
+): Promise<SwiftRequest> {
+  const { path, query } = parseRequest(req);
+
+  let body: any = null;
+  let files: any[] = [];
+
+  // Only parse body for methods that typically have bodies
+  const methodsWithBody = ["POST", "PUT", "PATCH"];
+  if (methodsWithBody.includes(req.method || "")) {
+    const contentType = req.headers["content-type"] || "";
+
+    if (
+      parsingOptions?.multipart &&
+      contentType.includes("multipart/form-data")
+    ) {
+      const boundaryMatch = RegExp(/boundary=([^;]+)/).exec(contentType);
+      if (boundaryMatch) {
+        const buffer = (await parseRequestBody(req, { raw: true })) as Buffer;
+        const parsed = parseMultipartData(buffer, boundaryMatch[1]);
+        body = parsed.fields;
+        files = parsed.files;
+      }
+    } else {
+      body = await parseRequestBody(req, parsingOptions);
+    }
+  }
+
+  // Cast and enhance the request object
+  const swiftReq = req as SwiftRequest;
+  swiftReq.path = path;
+  swiftReq.query = query;
+  swiftReq.body = body;
+  swiftReq.params = {}; // Will be set during routing
+
+  // Add files if multipart parsing was used
+  if (files.length > 0) {
+    (swiftReq as any).files = files;
+  }
+
+  return swiftReq;
+}
+
+// Re-export existing route matching functions (from Step 5)
 export function matchRoute(
   routePath: string,
   requestPath: string
@@ -79,11 +390,9 @@ export function matchRoute(
     const requestSegment = requestSegments[i];
 
     if (routeSegment.startsWith(":")) {
-      // Parameter segment
       const paramName = routeSegment.slice(1);
       params[paramName] = decodeURIComponent(requestSegment);
     } else if (routeSegment !== requestSegment) {
-      // Literal segment doesn't match
       return { matches: false, params: {} };
     }
   }
@@ -91,19 +400,14 @@ export function matchRoute(
   return { matches: true, params };
 }
 
-/**
- * Match wildcard routes (*)
- */
 export function matchWildcardRoute(
   routePath: string,
   requestPath: string
 ): { matches: boolean; params: Record<string, string> } {
-  // Handle exact wildcard
   if (routePath === "*") {
     return { matches: true, params: {} };
   }
 
-  // handle wildcard at end: /api/*
   if (routePath.endsWith("/*")) {
     const prefix = routePath.slice(0, -2);
     if (requestPath.startsWith(prefix)) {
@@ -117,9 +421,6 @@ export function matchWildcardRoute(
   return { matches: false, params: {} };
 }
 
-/**
- * Match optional parameters (/users/:id?)
- */
 export function matchOptionalRoute(
   routePath: string,
   requestPath: string
@@ -135,17 +436,13 @@ export function matchOptionalRoute(
     const routeSegment = routeSegments[routeIndex];
 
     if (routeSegment.startsWith(":") && routeSegment.endsWith("?")) {
-      // Optional param
       const paramName = routeSegment.slice(1, -1);
 
       if (requestIndex < requestSegments.length) {
-        // param provided
         params[paramName] = decodeURIComponent(requestSegments[requestIndex]);
         requestIndex++;
       }
-      // If not provided, that's okay! (it's optional...)
     } else if (routeSegment.startsWith(":")) {
-      // required param
       if (requestIndex >= requestSegments.length) {
         return { matches: false, params: {} };
       }
@@ -153,7 +450,6 @@ export function matchOptionalRoute(
       params[paramName] = decodeURIComponent(requestSegments[requestIndex]);
       requestIndex++;
     } else {
-      // literal segment
       if (
         requestIndex >= requestSegments.length ||
         routeSegment !== requestSegments[requestIndex]
@@ -162,82 +458,52 @@ export function matchOptionalRoute(
       }
       requestIndex++;
     }
+
     routeIndex++;
-    // all route segments matched, check if all request segments consumed
   }
+
   return {
     matches: requestIndex === requestSegments.length,
     params,
   };
 }
 
-/**
- * Match regex routes
- */
 export function matchRegexRoute(
   routePattern: RegExp,
   requestPath: string
 ): { matches: boolean; params: Record<string, string> } {
-  // I'd just like to say, I hate regex, so please never make use of this router because regex is a pain in the behind and i dont like doing this please send help oh my god i have mental issues this router is making me hate my life already, ill be back guys i need another monster.
   const match = RegExp(routePattern).exec(requestPath);
   if (!match) {
     return { matches: false, params: {} };
   }
+
   const params: Record<string, string> = {};
-  // add numbered captures as params (im back btw guys, and i got a monster! its the pink one)
   match.slice(1).forEach((capture, index) => {
     if (capture !== undefined) {
       params[`$${index + 1}`] = capture;
     }
   });
+
   return { matches: true, params };
 }
 
-/**
- * Enhanced route matching with all pattern types
- */
 export function enhancedMatchRoute(
   routePath: string | RegExp,
   requestPath: string
 ): { matches: boolean; params: Record<string, string> } {
-  // regex route (i hate you if you use this)
   if (routePath instanceof RegExp) {
     return matchRegexRoute(routePath, requestPath);
   }
-  // string routes
+
   const routeStr: string = routePath;
 
-  // wildcard route
   if (routeStr.includes("*")) {
     return matchWildcardRoute(routeStr, requestPath);
   }
 
-  // optional params routes
   if (routeStr.includes("?")) {
     return matchOptionalRoute(routeStr, requestPath);
   }
 
-  // standard route
   return matchRoute(routeStr, requestPath);
 }
-
-/**
- * Enhance the native request object with SwiftHTTP features
- */
-export async function enhanceRequest(
-  req: IncomingMessage
-): Promise<SwiftRequest> {
-  const { path, query } = parseRequest(req);
-  const body = await parseJsonBody(req);
-
-  // Cast and enhance the request object
-  const swiftReq = req as SwiftRequest;
-  swiftReq.path = path;
-  swiftReq.query = query;
-  swiftReq.body = body;
-  swiftReq.params = {}; // Will be set during routing dont you worry :smirk:
-
-  return swiftReq;
-}
-
-// if you're reading this, please donate to me so I can buy more monsters so I don't lose my mind with regex again :')

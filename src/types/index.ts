@@ -95,6 +95,27 @@ export interface ServerOptions {
 }
 
 /**
+ * Request parsing options
+ */
+export interface RequestParsingOptions {
+  limit?: string;
+  json?: boolean;
+  urlencoded?: boolean;
+  text?: boolean;
+  raw?: boolean;
+  multipart?: boolean;
+}
+
+/**
+ * Content type validation options
+ */
+export interface ContentTypeOptions {
+  allowedContentTypes?: string[];
+  maxSize?: string;
+  requireContentType?: boolean;
+}
+
+/**
  * Error handler function type
  */
 export type ErrorHandler = (
@@ -145,5 +166,31 @@ export class SwiftError extends Error {
     super(message);
     this.name = "SwiftError";
     Error.captureStackTrace?.(this, SwiftError);
+  }
+}
+
+/**
+ * Validation error class
+ */
+export class ValidationError extends SwiftError {
+  constructor(
+    public override message: string,
+    public errors: string[],
+    public field?: string
+  ) {
+    super(message, 400, "VALIDATION_ERROR");
+    this.name = "ValidationError";
+  }
+}
+
+/**
+ * Request parsing error class
+ */
+export class RequestParsingError extends SwiftError {
+  constructor(
+    public override message: string,
+    public parseType: string
+  ) {
+    super(message, 400, 'PARSING_ERROR');
   }
 }
