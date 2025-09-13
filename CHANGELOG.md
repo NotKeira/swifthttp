@@ -172,3 +172,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 **Note:** Version 1.0.0 tag was applied prematurely during initial development. The project has been restructured to follow proper semantic versioning, with v0.8.0 representing the current feature-complete state approaching v1.0.0 stability.
+
+## Version Links
+
+[Unreleased]: https://github.com/NotKeira/swifthttp/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/NotKeira/swifthttp/compare/v0.6.0...v0.8.0
+[0.6.0]: https://github.com/NotKeira/swifthttp/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/NotKeira/swifthttp/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/NotKeira/swifthttp/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/NotKeira/swifthttp/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/NotKeira/swifthttp/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/NotKeira/swifthttp/releases/tag/v0.1.0
