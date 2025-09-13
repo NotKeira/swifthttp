@@ -1,52 +1,125 @@
-import { IncomingMessage, ServerResponse } from "http";
+import { IncomingMessage, ServerResponse } from 'http';
 
 /**
  * HTTP method types
  */
-export type HttpMethod =
-  | "GET"
-  | "POST"
-  | "PUT"
-  | "DELETE"
-  | "PATCH"
-  | "HEAD"
-  | "OPTIONS";
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
+
+/**
+ * File upload interface
+ */
+export interface UploadedFile {
+  name: string;
+  filename?: string;
+  mimetype?: string;
+  data: Buffer;
+  size: number;
+}
+
+/**
+ * Cookie options interface
+ */
+export interface CookieOptions {
+  maxAge?: number;
+  expires?: Date;
+  httpOnly?: boolean;
+  secure?: boolean;
+  domain?: string;
+  path?: string;
+  sameSite?: 'strict' | 'lax' | 'none';
+}
+
+/**
+ * Cache control options
+ */
+export interface CacheOptions {
+  public?: boolean;
+  private?: boolean;
+  noCache?: boolean;
+  noStore?: boolean;
+  mustRevalidate?: boolean;
+}
+
+/**
+ * Security headers configuration
+ */
+export interface SecurityHeaders {
+  contentSecurityPolicy?: string;
+  strictTransportSecurity?: string;
+  xFrameOptions?: string;
+  xContentTypeOptions?: boolean;
+  referrerPolicy?: string;
+  permissionsPolicy?: string;
+}
 
 /**
  * Enhanced request object with parsed data
  */
 export interface SwiftRequest extends IncomingMessage {
+  id?: string;
   params: Record<string, string>;
   query: Record<string, string>;
   body: any;
   path: string;
+  files?: UploadedFile[];
+  raw?: Buffer;
+  cookies?: Record<string, string>;
+  accepts?: (types: string[]) => string | null;
 }
 
 /**
  * Enhanced response object with helper methods
  */
 export interface SwiftResponse extends ServerResponse {
+  // Basic response methods
   json: (data: any) => void;
   status: (code: number) => SwiftResponse;
   send: (data: string | Buffer) => void;
+  
+  // Navigation and redirects
+  redirect: (url: string, statusCode?: number) => void;
+  
+  // Cookie management
+  cookie: (name: string, value: string, options?: CookieOptions) => SwiftResponse;
+  clearCookie: (name: string, options?: Omit<CookieOptions, 'maxAge' | 'expires'>) => SwiftResponse;
+  
+  // File operations
+  download: (filePath: string, filename?: string) => void;
+  attachment: (filename?: string) => SwiftResponse;
+  
+  // Template rendering
+  render: (template: string, data?: any) => void;
+  
+  // Caching
+  cache: (maxAge: number, options?: CacheOptions) => SwiftResponse;
+  
+  // Compression
+  compress: (data: string | Buffer, force?: boolean) => Promise<void>;
+  
+  // Security
+  security: (options?: SecurityHeaders) => SwiftResponse;
+  
+  // Content type
+  type: (contentType: string) => SwiftResponse;
+  
+  // Vary header
+  vary: (field: string) => SwiftResponse;
 }
 
 /**
  * Route handler function type
  */
-export type RouteHandler = (
-  req: SwiftRequest,
-  res: SwiftResponse
-) => void | Promise<void>;
+export type RouteHandler = (req: SwiftRequest, res: SwiftResponse) => void | Promise<void>;
 
 /**
  * Middleware function type
  */
-export type Middleware = (
-  req: SwiftRequest,
-  res: SwiftResponse,
-  next: () => void
-) => void | Promise<void>;
+export type Middleware = (req: SwiftRequest, res: SwiftResponse, next: () => void) => void | Promise<void>;
+
+/**
+ * Error handler function type
+ */
+export type ErrorHandler = (error: Error, req: SwiftRequest, res: SwiftResponse, next: () => void) => void | Promise<void>;
 
 /**
  * Parameter validator function
@@ -92,6 +165,11 @@ export interface ServerOptions {
   hostname?: string;
   maxConnections?: number;
   timeout?: number;
+  errorReporting?: {
+    enabled?: boolean;
+    includeStack?: boolean;
+    logFile?: string;
+  };
 }
 
 /**
@@ -116,43 +194,30 @@ export interface ContentTypeOptions {
 }
 
 /**
- * Error handler function type
+ * Error context for error handlers
  */
-export type ErrorHandler = (
-  error: Error,
-  req: SwiftRequest,
-  res: SwiftResponse,
-  next: () => void
-) => void;
-
-/**
- * Middleware options for different types
- */
-export interface MiddlewareOptions {
-  cors?: {
-    origin?: string | string[];
-    methods?: string[];
-    allowedHeaders?: string[];
-    credentials?: boolean;
-  };
-  bodyParser?: {
-    urlencoded?: boolean;
-    limit?: string;
-  };
-  logger?: {
-    format?: "dev" | "combined";
-  };
-  static?: {
-    root: string;
-    index?: string;
-    dotfiles?: "allow" | "deny" | "ignore";
-  };
+export interface ErrorContext {
+  req: SwiftRequest;
+  res: SwiftResponse;
+  timestamp: Date;
+  userAgent?: string;
+  ip?: string;
 }
 
 /**
- * Middleware factory type
+ * Circuit breaker state
  */
-export type MiddlewareFactory<T = any> = (options?: T) => Middleware;
+export type CircuitBreakerState = 'closed' | 'open' | 'half-open';
+
+/**
+ * Circuit breaker options
+ */
+export interface CircuitBreakerOptions {
+  threshold?: number;
+  timeout?: number;
+  resetTimeout?: number;
+  onStateChange?: (state: CircuitBreakerState) => void;
+}
 
 /**
  * Custom SwiftHTTP error class
@@ -161,11 +226,22 @@ export class SwiftError extends Error {
   constructor(
     public override message: string,
     public statusCode: number = 500,
-    public code?: string
+    public code?: string,
+    public details?: any
   ) {
     super(message);
-    this.name = "SwiftError";
+    this.name = 'SwiftError';
     Error.captureStackTrace?.(this, SwiftError);
+  }
+
+  toJSON(): Record<string, any> {
+    return {
+      error: this.message,
+      status: this.statusCode,
+      code: this.code,
+      details: this.details,
+      timestamp: new Date().toISOString()
+    };
   }
 }
 
@@ -178,8 +254,8 @@ export class ValidationError extends SwiftError {
     public errors: string[],
     public field?: string
   ) {
-    super(message, 400, "VALIDATION_ERROR");
-    this.name = "ValidationError";
+    super(message, 400, 'VALIDATION_ERROR', { errors, field });
+    this.name = 'ValidationError';
   }
 }
 
@@ -191,6 +267,7 @@ export class RequestParsingError extends SwiftError {
     public override message: string,
     public parseType: string
   ) {
-    super(message, 400, 'PARSING_ERROR');
+    super(message, 400, 'PARSING_ERROR', { parseType });
+    this.name = 'RequestParsingError';
   }
 }
