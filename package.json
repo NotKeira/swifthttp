@@ -29,7 +29,7 @@
   },
   "bugs": {
     "url": "https://github.com/NotKeira/swifthttp/issues",
-    "email": "node-issues@keirahopkins.co.uk"
+    "email": "open-source@keirahopkins.co.uk"
   },
   "homepage": "https://github.com/NotKeira/swifthttp#readme",
   "files": [
@@ -40,9 +40,9 @@
   "engines": {
     "node": ">=16.0.0"
   },
-  "packageManager": "pnpm@10.14.0",
+  "packageManager": "pnpm@10.20.0+sha256.47a3352808501b8d1ef20112273b6a5dcfa53d28a55bcce36d268e878bd6bfe9",
   "devDependencies": {
-    "@types/node": "^24.2.1",
-    "typescript": "^5.9.2"
+    "@types/node": "^24.10.0",
+    "typescript": "^5.9.3"
   }
 }
