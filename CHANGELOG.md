@@ -43,6 +43,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Environment-aware default log levels (production: INFO, development: DEBUG, test: SILENT)
     - Exported singleton logger instance and createLogger factory function
     - Added comprehensive JSDoc documentation for all logger methods
+- Reorganized type system into modular files
+    - Created request.types.ts for request-related types (Request, UploadedFile, etc.)
+    - Created response.types.ts for response-related types (Response, CookieOptions, etc.)
+    - Created router.types.ts for routing types (Route, RouteHandler, RouteInfo, etc.)
+    - Created middleware.types.ts for middleware types (Middleware, ErrorHandler, NextFunction)
+    - Created server.types.ts for server configuration types (ServerOptions, CircuitBreakerOptions)
+    - Created error.types.ts for error classes (HttpError, ValidationError, RequestParsingError)
+    - Added comprehensive JSDoc documentation to all type definitions
+    - Created barrel export in types/index.ts for convenient importing
 
 ### Changed
 
@@ -56,7 +65,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Client/server errors include contextual information
     - Warning messages use logger.warn with relevant context
     - All log messages include structured data for better observability
-
+- Renamed types for clarity and consistency
+    - SwiftRequest → EnhancedRequest
+    - SwiftResponse → EnhancedResponse
+    - SwiftError → HttpError
+- Improved type organization following file-per-system architecture
+- Split monolithic src/types/index.ts into focused, single-purpose files
 ### Deprecated
 
 ### Removed
@@ -64,7 +78,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Direct console.log, console.error, and console.warn usage throughout codebase
     - Eliminates ESLint no-console warnings
     - Improves production log management and filtering
-
 ### Fixed
 
 - Corrected critical typo in package.json script: `prepublichOnly` → `prepublishOnly`
@@ -72,6 +85,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Prevents accidental publication of unbuilt or invalid code
 
 ### Security
+
+BREAKING CHANGE: Type names changed from Swift* prefix to more descriptive names.
+SwiftRequest → Request, SwiftResponse → Response, SwiftError → HttpError.
 
 ## [0.8.0] - 2025-09-13
 
