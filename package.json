@@ -7,9 +7,15 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
-    "clean": "rm -rf dist",
-    "prepublichOnly": "pnpm run clean && pnpm run build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "clean": "rm -r dist",
+    "prepublishOnly": "pnpm run clean && pnpm run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo \"Linting not configured yet\" && exit 0",
+    "format": "echo \"Formatting not configured yet\" && exit 0"
   },
   "keywords": [
     "http",
@@ -43,6 +49,9 @@
   "packageManager": "pnpm@10.20.0+sha256.47a3352808501b8d1ef20112273b6a5dcfa53d28a55bcce36d268e878bd6bfe9",
   "devDependencies": {
     "@types/node": "^24.10.0",
-    "typescript": "^5.9.3"
+    "@vitest/coverage-v8": "^4.0.8",
+    "@vitest/ui": "^4.0.8",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.8"
   }
 }

@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Testing infrastructure with Vitest
+    - Configured Vitest with 90% coverage thresholds for lines, functions, branches, and statements
+    - Added test scripts: `test`, `test:watch`, `test:ui`, `test:coverage`
+    - Created test directory structure for unit, integration, and fixture tests
+    - Added initial smoke tests for Server class to validate basic functionality
+    - Created mock request and response fixtures for consistent testing
+    - Configured path aliases (`@/*`) for cleaner test imports
+- Package.json scripts for development workflow
+    - Added `typecheck` script for TypeScript validation without building
+    - Added placeholder `lint` and `format` scripts for future ESLint/Prettier integration
+
 ### Changed
 
 ### Deprecated
@@ -17,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Corrected critical typo in package.json script: `prepublichOnly` → `prepublishOnly`
+    - This fixes the npm publish lifecycle hook that runs before publishing to npm
+    - Prevents accidental publication of unbuilt or invalid code
+
 ### Security
 
 ## [0.8.0] - 2025-09-13
@@ -24,21 +39,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Complete mixin system for modular development
-  - MiddlewareMixin for easy middleware setup
-  - EnvironmentMixin for auto-configuration based on NODE_ENV
-  - RoutingMixin for RESTful resources and API versioning
-  - DevUtilitiesMixin for debug tools and profiling
+    - MiddlewareMixin for easy middleware setup
+    - EnvironmentMixin for auto-configuration based on NODE_ENV
+    - RoutingMixin for RESTful resources and API versioning
+    - DevUtilitiesMixin for debug tools and profiling
 - Pre-configured enhanced classes (SwiftHTTPEssential, SwiftHTTPDev, SwiftHTTPProduction)
 - Comprehensive error handling system with custom error types
-  - HTTP-specific error classes (BadRequestError, UnauthorisedError, etc.)
-  - Error reporting with ConsoleErrorReporter and FileErrorReporter
-  - Error recovery patterns and circuit breakers
+    - HTTP-specific error classes (BadRequestError, UnauthorisedError, etc.)
+    - Error reporting with ConsoleErrorReporter and FileErrorReporter
+    - Error recovery patterns and circuit breakers
 - Enhanced response helpers
-  - Cookie management (res.cookie, res.clearCookie)
-  - File downloads and attachments
-  - Template rendering and caching
-  - Zero-dependency compression (gzip/deflate)
-  - Security headers application
+    - Cookie management (res.cookie, res.clearCookie)
+    - File downloads and attachments
+    - Template rendering and caching
+    - Zero-dependency compression (gzip/deflate)
+    - Security headers application
 - RESTful resource routing with automatic CRUD generation
 - API versioning and route namespacing
 - Route caching with TTL support
@@ -60,9 +75,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - Removed individual utility files in favour of organised modules
-  - src/utils/helpers.ts
-  - src/utils/logger.ts
-  - src/utils/validation.ts
+    - src/utils/helpers.ts
+    - src/utils/logger.ts
+    - src/utils/validation.ts
 - Consolidated functionality into main utility modules
 
 ### Fixed
@@ -171,15 +186,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-**Note:** Version 1.0.0 tag was applied prematurely during initial development. The project has been restructured to follow proper semantic versioning, with v0.8.0 representing the current feature-complete state approaching v1.0.0 stability.
+**Note:** Version 1.0.0 tag was applied prematurely during initial development. The project has been restructured to
+follow proper semantic versioning, with v0.8.0 representing the current feature-complete state approaching v1.0.0
+stability.
 
 ## Version Links
 
 [Unreleased]: https://github.com/NotKeira/swifthttp/compare/v0.8.0...HEAD
+
 [0.8.0]: https://github.com/NotKeira/swifthttp/compare/v0.6.0...v0.8.0
+
 [0.6.0]: https://github.com/NotKeira/swifthttp/compare/v0.5.0...v0.6.0
+
 [0.5.0]: https://github.com/NotKeira/swifthttp/compare/v0.4.0...v0.5.0
+
 [0.4.0]: https://github.com/NotKeira/swifthttp/compare/v0.3.0...v0.4.0
+
 [0.3.0]: https://github.com/NotKeira/swifthttp/compare/v0.2.0...v0.3.0
+
 [0.2.0]: https://github.com/NotKeira/swifthttp/compare/v0.1.0...v0.2.0
+
 [0.1.0]: https://github.com/NotKeira/swifthttp/releases/tag/v0.1.0
