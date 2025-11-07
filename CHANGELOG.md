@@ -34,6 +34,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Added TypeScript-specific rules for type safety and modern patterns
     - Added lint and format scripts to package.json
     - Integrated Prettier with ESLint for unified tooling
+- Structured logging system with configurable levels
+    - Created Logger class with debug, info, warn, error methods
+    - Configurable log levels (DEBUG, INFO, WARN, ERROR, SILENT)
+    - Colored output for terminal with ANSI color codes
+    - Timestamp support with ISO 8601 format
+    - Pretty-print JSON data in development mode
+    - Environment-aware default log levels (production: INFO, development: DEBUG, test: SILENT)
+    - Exported singleton logger instance and createLogger factory function
+    - Added comprehensive JSDoc documentation for all logger methods
 
 ### Changed
 
@@ -41,10 +50,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Fixed code style inconsistencies across all TypeScript files
     - Standardised formatting (quotes, spacing, line length)
     - Auto-fixed ESLint violations where possible
+- Replaced all console.* statements with structured logger
+    - Server startup/shutdown messages now use logger.info with structured data
+    - Error messages now use logger.error with error details and stack traces
+    - Client/server errors include contextual information
+    - Warning messages use logger.warn with relevant context
+    - All log messages include structured data for better observability
 
 ### Deprecated
 
 ### Removed
+
+- Direct console.log, console.error, and console.warn usage throughout codebase
+    - Eliminates ESLint no-console warnings
+    - Improves production log management and filtering
 
 ### Fixed
 
