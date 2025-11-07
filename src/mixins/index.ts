@@ -50,16 +50,16 @@ export function applyMixins<T extends Constructor>(
 ): T {
   let result = Base;
   const registry = MixinRegistry.getInstance();
-  
+
   for (const mixin of mixins) {
     const previous = result;
     result = mixin(previous);
-    
+
     if (result.prototype?.mixinName) {
       registry.register(Base.name, result.prototype.mixinName);
     }
   }
-  
+
   return result;
 }
 
@@ -81,7 +81,7 @@ export function createMixin<TBase extends Constructor, TReturn = {}>(
 
 // Import middleware and utilities
 import { cors, logger, bodyParser } from '../middleware';
-import { Middleware, SwiftRequest, SwiftResponse, HttpMethod, RouteHandler } from '../types';
+import { Middleware, SwiftRequest, SwiftResponse, RouteHandler } from '../types';
 
 /**
  * Middleware management mixin
@@ -244,12 +244,12 @@ class RouteCache {
   get(key: string): any | null {
     const entry = this.cache.get(key);
     if (!entry) return null;
-    
+
     if (Date.now() > entry.expires) {
       this.cache.delete(key);
       return null;
     }
-    
+
     return entry.data;
   }
 
@@ -268,7 +268,7 @@ export const RoutingMixin = createMixin<Constructor<any>, RoutingMixin>(
 
       resource(name: string, controller: ResourceController): this {
         const basePath = `/${name}`;
-        
+
         if (controller.index) {
           this.get(basePath, controller.index);
         }
@@ -290,7 +290,7 @@ export const RoutingMixin = createMixin<Constructor<any>, RoutingMixin>(
         if (controller.new) {
           this.get(`${basePath}/new`, controller.new);
         }
-        
+
         return this;
       }
 
@@ -309,44 +309,44 @@ export const RoutingMixin = createMixin<Constructor<any>, RoutingMixin>(
         const cachedHandler: RouteHandler = async (req, res) => {
           const cacheKey = `${req.method}:${req.path}:${JSON.stringify(req.query)}`;
           const cached = this.routeCache.get(cacheKey);
-          
+
           if (cached) {
             res.setHeader('X-Cache', 'HIT');
             res.json(cached);
             return;
           }
-          
+
           const originalJson = res.json.bind(res);
           res.json = (data: any) => {
             this.routeCache.set(cacheKey, data, ttl);
             res.setHeader('X-Cache', 'MISS');
             return originalJson(data);
           };
-          
+
           await handler(req, res);
         };
-        
+
         this.get(path, cachedHandler);
         return this;
       }
 
       alias(from: string, to: string): this {
         this.routeAliases.set(from, to);
-        this.get(from, (req: SwiftRequest, res: SwiftResponse) => {
+        this.get(from, (_req: SwiftRequest, res: SwiftResponse) => {
           res.redirect(to, 301);
         });
         return this;
       }
 
       redirect(from: string, to: string, statusCode: number = 302): this {
-        this.get(from, (req: SwiftRequest, res: SwiftResponse) => {
+        this.get(from, (_req: SwiftRequest, res: SwiftResponse) => {
           res.redirect(to, statusCode);
         });
         return this;
       }
 
       addHealthCheck(path: string = '/health'): this {
-        this.get(path, (req: SwiftRequest, res: SwiftResponse) => {
+        this.get(path, (_req: SwiftRequest, res: SwiftResponse) => {
           const healthData = {
             status: 'healthy',
             timestamp: new Date().toISOString(),
@@ -359,14 +359,14 @@ export const RoutingMixin = createMixin<Constructor<any>, RoutingMixin>(
               aliases: this.routeAliases.size
             }
           };
-          
+
           res.json(healthData);
         });
         return this;
       }
 
       docs(path: string = '/docs'): this {
-        this.get(path, (req: SwiftRequest, res: SwiftResponse) => {
+        this.get(path, (_req: SwiftRequest, res: SwiftResponse) => {
           const routes = this.listRoutes();
           const documentation = {
             title: 'SwiftHTTP API Documentation',
@@ -382,7 +382,7 @@ export const RoutingMixin = createMixin<Constructor<any>, RoutingMixin>(
             aliases: Object.fromEntries(this.routeAliases),
             cacheSize: this.routeCache.size()
           };
-          
+
           res.json(documentation);
         });
         return this;
@@ -419,36 +419,36 @@ export const DevUtilitiesMixin = createMixin<Constructor<any>, DevUtilitiesMixin
 
       enableDevMode(): this {
         this.devMode = true;
-        
+
         this.use((req: SwiftRequest, res: SwiftResponse, next: () => void) => {
           res.setHeader('X-Dev-Mode', 'true');
           res.setHeader('X-Request-ID', `dev_${Date.now()}`);
-          
+
           console.log(`[DEV] ${req.method} ${req.path}`, {
             headers: req.headers,
             query: req.query,
             params: req.params
           });
-          
+
           next();
         });
-        
+
         return this;
       }
 
       addDebugRoutes(): this {
-        this.get('/_debug/routes', (req: SwiftRequest, res: SwiftResponse) => {
+        this.get('/_debug/routes', (_req: SwiftRequest, res: SwiftResponse) => {
           res.json({
             routes: this.listRoutes(),
             totalRoutes: this.listRoutes().length
           });
         });
 
-        this.get('/_debug/memory', (req: SwiftRequest, res: SwiftResponse) => {
+        this.get('/_debug/memory', (_req: SwiftRequest, res: SwiftResponse) => {
           res.json(this.profileMemory());
         });
 
-        this.get('/_debug/server', (req: SwiftRequest, res: SwiftResponse) => {
+        this.get('/_debug/server', (_req: SwiftRequest, res: SwiftResponse) => {
           res.json({
             nodeVersion: process.version,
             platform: process.platform,
@@ -531,7 +531,7 @@ export function createSwiftHTTPWithProduction<T>(BaseClass: T) {
 /**
  * Type helpers for enhanced SwiftHTTP classes
  */
-export type SwiftHTTPWithEssentials<T> = T & 
+export type SwiftHTTPWithEssentials<T> = T &
   InstanceType<ReturnType<typeof MiddlewareMixin>> &
   InstanceType<ReturnType<typeof EnvironmentMixin>> &
   InstanceType<ReturnType<typeof RoutingMixin>>;
