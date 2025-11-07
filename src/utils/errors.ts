@@ -1,4 +1,4 @@
-import { SwiftRequest, SwiftResponse } from '../types';
+import type { SwiftRequest, SwiftResponse } from '../types';
 
 /**
  * Base SwiftHTTP error class
@@ -21,7 +21,7 @@ export class SwiftError extends Error {
       status: this.statusCode,
       code: this.code,
       details: this.details,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 }
@@ -128,21 +128,28 @@ export const createError = {
   unauthorized: (message?: string, details?: any) => new UnauthorizedError(message, details),
   forbidden: (message?: string, details?: any) => new ForbiddenError(message, details),
   notFound: (message?: string, details?: any) => new NotFoundError(message, details),
-  methodNotAllowed: (message?: string, allowedMethods?: string[]) => new MethodNotAllowedError(message, allowedMethods),
+  methodNotAllowed: (message?: string, allowedMethods?: string[]) =>
+    new MethodNotAllowedError(message, allowedMethods),
   conflict: (message?: string, details?: any) => new ConflictError(message, details),
-  unprocessableEntity: (message?: string, details?: any) => new UnprocessableEntityError(message, details),
-  tooManyRequests: (message?: string, retryAfter?: number) => new TooManyRequestsError(message, retryAfter),
+  unprocessableEntity: (message?: string, details?: any) =>
+    new UnprocessableEntityError(message, details),
+  tooManyRequests: (message?: string, retryAfter?: number) =>
+    new TooManyRequestsError(message, retryAfter),
   internalServer: (message?: string, details?: any) => new InternalServerError(message, details),
-  validation: (message: string, errors: string[], field?: string) => new ValidationError(message, errors, field),
+  validation: (message: string, errors: string[], field?: string) =>
+    new ValidationError(message, errors, field),
   parsing: (message: string, parseType: string) => new RequestParsingError(message, parseType),
-  timeout: (message?: string, timeout?: number) => new TimeoutError(message, timeout)
+  timeout: (message?: string, timeout?: number) => new TimeoutError(message, timeout),
 };
 
 /**
  * Error reporting interface
  */
 export interface ErrorReporter {
-  report: (error: SwiftError, context: { req: SwiftRequest; res: SwiftResponse }) => void | Promise<void>;
+  report: (
+    error: SwiftError,
+    context: { req: SwiftRequest; res: SwiftResponse }
+  ) => void | Promise<void>;
 }
 
 /**
@@ -154,22 +161,22 @@ export class ConsoleErrorReporter implements ErrorReporter {
   report(error: SwiftError, context: { req: SwiftRequest; res: SwiftResponse }): void {
     const { req } = context;
     const timestamp = new Date().toISOString();
-    
+
     console.error(`[${timestamp}] SwiftHTTP Error:`);
     console.error(`  Method: ${req.method}`);
     console.error(`  Path: ${req.path || req.url}`);
     console.error(`  Status: ${error.statusCode}`);
     console.error(`  Message: ${error.message}`);
     console.error(`  Code: ${error.code || 'UNKNOWN'}`);
-    
+
     if (error.details) {
       console.error(`  Details:`, error.details);
     }
-    
+
     if (this.includeStack && error.stack) {
       console.error(`  Stack:`, error.stack);
     }
-    
+
     console.error('---');
   }
 }
@@ -183,10 +190,13 @@ export class FileErrorReporter implements ErrorReporter {
 
   constructor(private logFilePath: string = './error.log') {}
 
-  async report(error: SwiftError, context: { req: SwiftRequest; res: SwiftResponse }): Promise<void> {
+  async report(
+    error: SwiftError,
+    context: { req: SwiftRequest; res: SwiftResponse }
+  ): Promise<void> {
     const { req } = context;
     const timestamp = new Date().toISOString();
-    
+
     const logEntry = {
       timestamp,
       method: req.method,
@@ -197,12 +207,12 @@ export class FileErrorReporter implements ErrorReporter {
       details: error.details,
       userAgent: req.headers['user-agent'],
       ip: req.socket.remoteAddress,
-      stack: error.stack
+      stack: error.stack,
     };
-    
+
     const logLine = JSON.stringify(logEntry) + '\n';
     this.logQueue.push(logLine);
-    
+
     if (!this.isWriting) {
       this.processQueue();
     }
@@ -210,12 +220,12 @@ export class FileErrorReporter implements ErrorReporter {
 
   private async processQueue(): Promise<void> {
     this.isWriting = true;
-    
+
     while (this.logQueue.length > 0) {
       const logLine = this.logQueue.shift()!;
       console.log(`Would write to ${this.logFilePath}:`, logLine.trim());
     }
-    
+
     this.isWriting = false;
   }
 }
@@ -226,10 +236,13 @@ export class FileErrorReporter implements ErrorReporter {
 export class CompositeErrorReporter implements ErrorReporter {
   constructor(private readonly reporters: ErrorReporter[]) {}
 
-  async report(error: SwiftError, context: { req: SwiftRequest; res: SwiftResponse }): Promise<void> {
+  async report(
+    error: SwiftError,
+    context: { req: SwiftRequest; res: SwiftResponse }
+  ): Promise<void> {
     await Promise.all(
-      this.reporters.map(reporter => 
-        Promise.resolve(reporter.report(error, context)).catch(reportError => {
+      this.reporters.map((reporter) =>
+        Promise.resolve(reporter.report(error, context)).catch((reportError) => {
           console.error('Error in error reporter:', reportError);
         })
       )
@@ -251,10 +264,10 @@ export function normaliseError(error: any): SwiftError {
   if (isSwiftError(error)) {
     return error;
   }
-  
+
   if (error instanceof Error) {
     return new InternalServerError(error.message, { originalError: error.name });
   }
-  
+
   return new InternalServerError('Unknown error occurred', { originalError: error });
 }

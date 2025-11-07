@@ -81,7 +81,7 @@ export function createMixin<TBase extends Constructor, TReturn = {}>(
 
 // Import middleware and utilities
 import { cors, logger, bodyParser } from '../middleware';
-import { Middleware, SwiftRequest, SwiftResponse, RouteHandler } from '../types';
+import type { Middleware, SwiftRequest, SwiftResponse, RouteHandler } from '../types';
 
 /**
  * Middleware management mixin
@@ -133,22 +133,15 @@ export const MiddlewareMixin = createMixin<Constructor<any>, MiddlewareMixin>(
       }
 
       useProduction(): this {
-        return this
-          .enableLogging('combined')
-          .enableBodyParser();
+        return this.enableLogging('combined').enableBodyParser();
       }
 
       useDevelopment(): this {
-        return this
-          .enableCors()
-          .enableLogging('dev')
-          .enableBodyParser();
+        return this.enableCors().enableLogging('dev').enableBodyParser();
       }
 
       useBasic(): this {
-        return this
-          .enableLogging()
-          .enableBodyParser();
+        return this.enableLogging().enableBodyParser();
       }
     };
   }
@@ -243,7 +236,9 @@ class RouteCache {
 
   get(key: string): any | null {
     const entry = this.cache.get(key);
-    if (!entry) return null;
+    if (!entry) {
+      return null;
+    }
 
     if (Date.now() > entry.expires) {
       this.cache.delete(key);
@@ -356,8 +351,8 @@ export const RoutingMixin = createMixin<Constructor<any>, RoutingMixin>(
             environment: process.env.NODE_ENV || 'development',
             routeCache: {
               size: this.routeCache.size(),
-              aliases: this.routeAliases.size
-            }
+              aliases: this.routeAliases.size,
+            },
           };
 
           res.json(healthData);
@@ -372,15 +367,23 @@ export const RoutingMixin = createMixin<Constructor<any>, RoutingMixin>(
             title: 'SwiftHTTP API Documentation',
             version: '1.0.0',
             generatedAt: new Date().toISOString(),
-            routes: routes.map((route: { method: any; path: any; hasParams: any; paramNames: any; middlewareCount: any; }) => ({
-              method: route.method,
-              path: route.path,
-              hasParams: route.hasParams,
-              paramNames: route.paramNames,
-              middlewareCount: route.middlewareCount
-            })),
+            routes: routes.map(
+              (route: {
+                method: any;
+                path: any;
+                hasParams: any;
+                paramNames: any;
+                middlewareCount: any;
+              }) => ({
+                method: route.method,
+                path: route.path,
+                hasParams: route.hasParams,
+                paramNames: route.paramNames,
+                middlewareCount: route.middlewareCount,
+              })
+            ),
             aliases: Object.fromEntries(this.routeAliases),
-            cacheSize: this.routeCache.size()
+            cacheSize: this.routeCache.size(),
           };
 
           res.json(documentation);
@@ -427,7 +430,7 @@ export const DevUtilitiesMixin = createMixin<Constructor<any>, DevUtilitiesMixin
           console.log(`[DEV] ${req.method} ${req.path}`, {
             headers: req.headers,
             query: req.query,
-            params: req.params
+            params: req.params,
           });
 
           next();
@@ -440,7 +443,7 @@ export const DevUtilitiesMixin = createMixin<Constructor<any>, DevUtilitiesMixin
         this.get('/_debug/routes', (_req: SwiftRequest, res: SwiftResponse) => {
           res.json({
             routes: this.listRoutes(),
-            totalRoutes: this.listRoutes().length
+            totalRoutes: this.listRoutes().length,
           });
         });
 
@@ -456,7 +459,7 @@ export const DevUtilitiesMixin = createMixin<Constructor<any>, DevUtilitiesMixin
             uptime: process.uptime(),
             pid: process.pid,
             environment: process.env.NODE_ENV || 'development',
-            devMode: this.devMode
+            devMode: this.devMode,
           });
         });
 
@@ -466,15 +469,23 @@ export const DevUtilitiesMixin = createMixin<Constructor<any>, DevUtilitiesMixin
       dumpRoutes(): void {
         const routes = this.listRoutes();
         console.log('\n=== SwiftHTTP Routes ===');
-        routes.forEach((route: { method: string; path: any; hasParams: any; paramNames: any[]; middlewareCount: number; }) => {
-          console.log(`${route.method.padEnd(7)} ${route.path}`);
-          if (route.hasParams) {
-            console.log(`         Params: ${route.paramNames.join(', ')}`);
+        routes.forEach(
+          (route: {
+            method: string;
+            path: any;
+            hasParams: any;
+            paramNames: any[];
+            middlewareCount: number;
+          }) => {
+            console.log(`${route.method.padEnd(7)} ${route.path}`);
+            if (route.hasParams) {
+              console.log(`         Params: ${route.paramNames.join(', ')}`);
+            }
+            if (route.middlewareCount > 0) {
+              console.log(`         Middleware: ${route.middlewareCount}`);
+            }
           }
-          if (route.middlewareCount > 0) {
-            console.log(`         Middleware: ${route.middlewareCount}`);
-          }
-        });
+        );
         console.log(`\nTotal routes: ${routes.length}\n`);
       }
 
@@ -486,7 +497,7 @@ export const DevUtilitiesMixin = createMixin<Constructor<any>, DevUtilitiesMixin
           external: memUsage.external,
           heapUsed: memUsage.heapUsed,
           heapTotal: memUsage.heapTotal,
-          buffers: memUsage.arrayBuffers
+          buffers: memUsage.arrayBuffers,
         };
       }
     };
@@ -496,22 +507,11 @@ export const DevUtilitiesMixin = createMixin<Constructor<any>, DevUtilitiesMixin
 /**
  * Pre-configured mixin combinations
  */
-export const EssentialMixins = [
-  MiddlewareMixin,
-  EnvironmentMixin,
-  RoutingMixin
-];
+export const EssentialMixins = [MiddlewareMixin, EnvironmentMixin, RoutingMixin];
 
-export const DevelopmentMixins = [
-  ...EssentialMixins,
-  DevUtilitiesMixin
-];
+export const DevelopmentMixins = [...EssentialMixins, DevUtilitiesMixin];
 
-export const ProductionMixins = [
-  MiddlewareMixin,
-  EnvironmentMixin,
-  RoutingMixin
-];
+export const ProductionMixins = [MiddlewareMixin, EnvironmentMixin, RoutingMixin];
 
 /**
  * Helper functions to create enhanced SwiftHTTP classes
@@ -531,12 +531,8 @@ export function createSwiftHTTPWithProduction<T>(BaseClass: T) {
 /**
  * Type helpers for enhanced SwiftHTTP classes
  */
-export type SwiftHTTPWithEssentials<T> = T &
-  InstanceType<ReturnType<typeof MiddlewareMixin>> &
-  InstanceType<ReturnType<typeof EnvironmentMixin>> &
-  InstanceType<ReturnType<typeof RoutingMixin>>;
+export type SwiftHTTPWithEssentials<T> = T & InstanceType<ReturnType<typeof MiddlewareMixin>>;
 
-export type SwiftHTTPWithDev<T> = SwiftHTTPWithEssentials<T> &
-  InstanceType<ReturnType<typeof DevUtilitiesMixin>>;
+export type SwiftHTTPWithDev<T> = SwiftHTTPWithEssentials<T>;
 
 export type SwiftHTTPWithProduction<T> = SwiftHTTPWithEssentials<T>;

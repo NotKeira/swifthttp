@@ -12,17 +12,17 @@ import { Socket } from 'net';
  * Creates a mock HTTP request object
  */
 export function createMockRequest(options: {
-    method?: string;
-    url?: string;
-    headers?: Record<string, string>;
-    body?: any;
+  method?: string;
+  url?: string;
+  headers?: Record<string, string>;
+  body?: any;
 }): Partial<IncomingMessage> {
-    const socket = new Socket();
+  const socket = new Socket();
 
-    return {
-        method: options.method || 'GET',
-        url: options.url || '/',
-        headers: options.headers || {},
-        socket,
-    };
+  return {
+    method: options.method || 'GET',
+    url: options.url || '/',
+    headers: options.headers || {},
+    socket,
+  };
 }

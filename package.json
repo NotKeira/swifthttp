@@ -14,8 +14,10 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "echo \"Linting not configured yet\" && exit 0",
-    "format": "echo \"Formatting not configured yet\" && exit 0"
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"__tests__/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"__tests__/**/*.ts\""
   },
   "keywords": [
     "http",
@@ -48,9 +50,18 @@
   },
   "packageManager": "pnpm@10.20.0+sha256.47a3352808501b8d1ef20112273b6a5dcfa53d28a55bcce36d268e878bd6bfe9",
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.46.3",
+    "@typescript-eslint/parser": "^8.46.3",
     "@vitest/coverage-v8": "^4.0.8",
     "@vitest/ui": "^4.0.8",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "globals": "^16.5.0",
+    "prettier": "^3.6.2",
     "typescript": "^5.9.3",
     "vitest": "^4.0.8"
   }

@@ -1,5 +1,6 @@
-import { createServer, Server } from 'http';
-import {
+import type { Server } from 'http';
+import { createServer } from 'http';
+import type {
   HttpMethod,
   SwiftRequest,
   SwiftResponse,
@@ -11,17 +12,12 @@ import {
   SwiftError,
   ParamValidator,
   RouteInfo,
-  ErrorContext
+  ErrorContext,
 } from './types';
 import { enhanceRequest, enhancedMatchRoute } from './utils/request';
 import { enhanceResponse } from './utils/response';
-import {
-  isSwiftError,
-  normaliseError,
-  ErrorReporter,
-  ConsoleErrorReporter,
-  createError
-} from './utils/errors';
+import type { ErrorReporter } from './utils/errors';
+import { isSwiftError, normaliseError, ConsoleErrorReporter, createError } from './utils/errors';
 
 /**
  * SwiftHTTP - A lightweight, high-performance HTTP server with mixin support
@@ -106,7 +102,11 @@ export class SwiftHTTP {
    */
   get(path: string, handler: RouteHandler): void;
   get(path: string, middleware: Middleware[], handler: RouteHandler): void;
-  get(path: string, middlewareOrHandler: Middleware[] | RouteHandler, handler?: RouteHandler): void {
+  get(
+    path: string,
+    middlewareOrHandler: Middleware[] | RouteHandler,
+    handler?: RouteHandler
+  ): void {
     if (Array.isArray(middlewareOrHandler)) {
       this.addRouteWithMiddleware('GET', path, middlewareOrHandler, handler!);
     } else {
@@ -119,7 +119,11 @@ export class SwiftHTTP {
    */
   post(path: string, handler: RouteHandler): void;
   post(path: string, middleware: Middleware[], handler: RouteHandler): void;
-  post(path: string, middlewareOrHandler: Middleware[] | RouteHandler, handler?: RouteHandler): void {
+  post(
+    path: string,
+    middlewareOrHandler: Middleware[] | RouteHandler,
+    handler?: RouteHandler
+  ): void {
     if (Array.isArray(middlewareOrHandler)) {
       this.addRouteWithMiddleware('POST', path, middlewareOrHandler, handler!);
     } else {
@@ -132,7 +136,11 @@ export class SwiftHTTP {
    */
   put(path: string, handler: RouteHandler): void;
   put(path: string, middleware: Middleware[], handler: RouteHandler): void;
-  put(path: string, middlewareOrHandler: Middleware[] | RouteHandler, handler?: RouteHandler): void {
+  put(
+    path: string,
+    middlewareOrHandler: Middleware[] | RouteHandler,
+    handler?: RouteHandler
+  ): void {
     if (Array.isArray(middlewareOrHandler)) {
       this.addRouteWithMiddleware('PUT', path, middlewareOrHandler, handler!);
     } else {
@@ -145,7 +153,11 @@ export class SwiftHTTP {
    */
   delete(path: string, handler: RouteHandler): void;
   delete(path: string, middleware: Middleware[], handler: RouteHandler): void;
-  delete(path: string, middlewareOrHandler: Middleware[] | RouteHandler, handler?: RouteHandler): void {
+  delete(
+    path: string,
+    middlewareOrHandler: Middleware[] | RouteHandler,
+    handler?: RouteHandler
+  ): void {
     if (Array.isArray(middlewareOrHandler)) {
       this.addRouteWithMiddleware('DELETE', path, middlewareOrHandler, handler!);
     } else {
@@ -158,7 +170,11 @@ export class SwiftHTTP {
    */
   patch(path: string, handler: RouteHandler): void;
   patch(path: string, middleware: Middleware[], handler: RouteHandler): void;
-  patch(path: string, middlewareOrHandler: Middleware[] | RouteHandler, handler?: RouteHandler): void {
+  patch(
+    path: string,
+    middlewareOrHandler: Middleware[] | RouteHandler,
+    handler?: RouteHandler
+  ): void {
     if (Array.isArray(middlewareOrHandler)) {
       this.addRouteWithMiddleware('PATCH', path, middlewareOrHandler, handler!);
     } else {
@@ -176,7 +192,12 @@ export class SwiftHTTP {
   /**
    * Add route with specific middleware
    */
-  addRouteWithMiddleware(method: HttpMethod, path: string, middleware: Middleware[], handler: RouteHandler): void {
+  addRouteWithMiddleware(
+    method: HttpMethod,
+    path: string,
+    middleware: Middleware[],
+    handler: RouteHandler
+  ): void {
     this.routes.push({ method, path, handler, middleware });
   }
 
@@ -191,7 +212,7 @@ export class SwiftHTTP {
     routes();
 
     const newRoutes = this.routes.slice(originalRoutes.length);
-    newRoutes.forEach(route => {
+    newRoutes.forEach((route) => {
       if (typeof route.path === 'string') {
         route.path = prefix + route.path;
       }
@@ -205,7 +226,7 @@ export class SwiftHTTP {
    * Parameter validation
    */
   param(name: string, validator: ParamValidator): void {
-    this.routes.forEach(route => {
+    this.routes.forEach((route) => {
       if (typeof route.path === 'string' && route.path.includes(`:${name}`)) {
         route.params = route.params || {};
         route.params[name] = validator;
@@ -217,14 +238,18 @@ export class SwiftHTTP {
    * List all routes (debugging utility)
    */
   listRoutes(): RouteInfo[] {
-    return this.routes.map(route => ({
+    return this.routes.map((route) => ({
       method: route.method,
       path: route.path,
       middlewareCount: route.middleware?.length || 0,
       hasParams: typeof route.path === 'string' && route.path.includes(':'),
-      paramNames: typeof route.path === 'string'
-        ? route.path.split('/').filter(segment => segment.startsWith(':')).map(param => param.slice(1))
-        : []
+      paramNames:
+        typeof route.path === 'string'
+          ? route.path
+              .split('/')
+              .filter((segment) => segment.startsWith(':'))
+              .map((param) => param.slice(1))
+          : [],
     }));
   }
 
@@ -237,7 +262,9 @@ export class SwiftHTTP {
 
     return this.server.listen(finalPort, finalHostname, () => {
       console.log(`SwiftHTTP server running on http://${finalHostname}:${finalPort}`);
-      if (callback) callback();
+      if (callback) {
+        callback();
+      }
     });
   }
 
@@ -252,7 +279,9 @@ export class SwiftHTTP {
       } else {
         console.log('SwiftHTTP server shut down successfully');
       }
-      if (callback) callback(err);
+      if (callback) {
+        callback(err);
+      }
     });
   }
 
@@ -304,13 +333,15 @@ export class SwiftHTTP {
       }
 
       await this.executeHandler(route.handler, enhancedReq, enhancedRes);
-
     } catch (error) {
       await this.handleError(error as Error, req, res, startTime);
     }
   }
 
-  private async validateRouteParams(validators: Record<string, ParamValidator>, params: Record<string, string>): Promise<void> {
+  private async validateRouteParams(
+    validators: Record<string, ParamValidator>,
+    params: Record<string, string>
+  ): Promise<void> {
     const errors: string[] = [];
 
     for (const [paramName, validator] of Object.entries(validators)) {
@@ -332,7 +363,11 @@ export class SwiftHTTP {
     }
   }
 
-  private async executeHandler(handler: RouteHandler, req: SwiftRequest, res: SwiftResponse): Promise<void> {
+  private async executeHandler(
+    handler: RouteHandler,
+    req: SwiftRequest,
+    res: SwiftResponse
+  ): Promise<void> {
     try {
       await handler(req, res);
     } catch (error) {
@@ -356,7 +391,11 @@ export class SwiftHTTP {
     return null;
   }
 
-  private async executeMiddleware(middlewares: Middleware[], req: SwiftRequest, res: SwiftResponse): Promise<void> {
+  private async executeMiddleware(
+    middlewares: Middleware[],
+    req: SwiftRequest,
+    res: SwiftResponse
+  ): Promise<void> {
     let index = 0;
 
     const dispatch = async (i: number): Promise<void> => {
@@ -390,7 +429,12 @@ export class SwiftHTTP {
     await dispatch(0);
   }
 
-  private async handleError(error: Error, req: SwiftRequest, res: SwiftResponse, startTime?: number): Promise<void> {
+  private async handleError(
+    error: Error,
+    req: SwiftRequest,
+    res: SwiftResponse,
+    startTime?: number
+  ): Promise<void> {
     const swiftError = normaliseError(error);
     const duration = startTime ? Date.now() - startTime : 0;
 
@@ -399,7 +443,7 @@ export class SwiftHTTP {
       res,
       timestamp: new Date(),
       userAgent: req.headers['user-agent'],
-      ip: req.socket.remoteAddress
+      ip: req.socket.remoteAddress,
     };
 
     try {
@@ -411,12 +455,12 @@ export class SwiftHTTP {
     try {
       if (this.errorHandlers.length > 0) {
         for (const handler of this.errorHandlers) {
-          await handler(swiftError, req, res, () => { });
+          await handler(swiftError, req, res, () => {});
         }
       }
 
       if (this.globalErrorHandler) {
-        await this.globalErrorHandler(swiftError, req, res, () => { });
+        await this.globalErrorHandler(swiftError, req, res, () => {});
       }
     } catch (handlerError) {
       console.error('Error in custom error handlers:', handlerError);
@@ -447,7 +491,7 @@ export class SwiftHTTP {
       error: error.message,
       status: error.statusCode,
       code: error.code,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
     if (isDevelopment) {
@@ -460,15 +504,15 @@ export class SwiftHTTP {
           path: req.path || req.url,
           headers: req.headers,
           params: req.params,
-          query: req.query
-        }
+          query: req.query,
+        },
       };
     }
 
     const productionResponse: any = {
       error: error.statusCode >= 500 ? 'Internal Server Error' : error.message,
       status: error.statusCode,
-      timestamp: baseResponse.timestamp
+      timestamp: baseResponse.timestamp,
     };
 
     if (error.statusCode < 500 && error.details) {
@@ -496,7 +540,7 @@ export { getMimeType, parseCookies, serialiseCookie } from './utils/response';
 import {
   createSwiftHTTPWithEssentials,
   createSwiftHTTPWithDev,
-  createSwiftHTTPWithProduction
+  createSwiftHTTPWithProduction,
 } from './mixins';
 
 export const SwiftHTTPEssential = createSwiftHTTPWithEssentials(SwiftHTTP);

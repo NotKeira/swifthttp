@@ -1,4 +1,4 @@
-import { IncomingMessage, ServerResponse } from 'http';
+import type { IncomingMessage, ServerResponse } from 'http';
 
 /**
  * HTTP method types
@@ -75,33 +75,33 @@ export interface SwiftResponse extends ServerResponse {
   json: (data: any) => void;
   status: (code: number) => SwiftResponse;
   send: (data: string | Buffer) => void;
-  
+
   // Navigation and redirects
   redirect: (url: string, statusCode?: number) => void;
-  
+
   // Cookie management
   cookie: (name: string, value: string, options?: CookieOptions) => SwiftResponse;
   clearCookie: (name: string, options?: Omit<CookieOptions, 'maxAge' | 'expires'>) => SwiftResponse;
-  
+
   // File operations
   download: (filePath: string, filename?: string) => void;
   attachment: (filename?: string) => SwiftResponse;
-  
+
   // Template rendering
   render: (template: string, data?: any) => void;
-  
+
   // Caching
   cache: (maxAge: number, options?: CacheOptions) => SwiftResponse;
-  
+
   // Compression
   compress: (data: string | Buffer, force?: boolean) => Promise<void>;
-  
+
   // Security
   security: (options?: SecurityHeaders) => SwiftResponse;
-  
+
   // Content type
   type: (contentType: string) => SwiftResponse;
-  
+
   // Vary header
   vary: (field: string) => SwiftResponse;
 }
@@ -114,12 +114,21 @@ export type RouteHandler = (req: SwiftRequest, res: SwiftResponse) => void | Pro
 /**
  * Middleware function type
  */
-export type Middleware = (req: SwiftRequest, res: SwiftResponse, next: () => void) => void | Promise<void>;
+export type Middleware = (
+  req: SwiftRequest,
+  res: SwiftResponse,
+  next: () => void
+) => void | Promise<void>;
 
 /**
  * Error handler function type
  */
-export type ErrorHandler = (error: Error, req: SwiftRequest, res: SwiftResponse, next: () => void) => void | Promise<void>;
+export type ErrorHandler = (
+  error: Error,
+  req: SwiftRequest,
+  res: SwiftResponse,
+  next: () => void
+) => void | Promise<void>;
 
 /**
  * Parameter validator function
@@ -240,7 +249,7 @@ export class SwiftError extends Error {
       status: this.statusCode,
       code: this.code,
       details: this.details,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 }

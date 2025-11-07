@@ -27,8 +27,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Default configuration constants (ports, timeouts, limits, protocols)
     - Error message and error code constants for consistent error handling
     - Barrel export from `src/constants/` for convenient importing
+- Code quality tooling with ESLint and Prettier
+    - Configured ESLint with flat config format (eslint.config.mjs) using modern ESLint 9+ standards
+    - Configured Prettier for consistent code formatting
+    - Added ESLint rules: no console warnings, no any types, Yoda conditions disabled
+    - Added TypeScript-specific rules for type safety and modern patterns
+    - Added lint and format scripts to package.json
+    - Integrated Prettier with ESLint for unified tooling
 
 ### Changed
+
+- Applied automated linting and formatting to entire codebase
+    - Fixed code style inconsistencies across all TypeScript files
+    - Standardised formatting (quotes, spacing, line length)
+    - Auto-fixed ESLint violations where possible
 
 ### Deprecated
 

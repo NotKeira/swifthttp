@@ -44,18 +44,18 @@ export const DEFAULT_REQUEST_ID_LENGTH = 9;
  * HTTP protocol version strings
  */
 export const HTTP_PROTOCOL = {
-    HTTP_1_0: 'HTTP/1.0',
-    HTTP_1_1: 'HTTP/1.1',
-    HTTP_2: 'HTTP/2.0',
+  HTTP_1_0: 'HTTP/1.0',
+  HTTP_1_1: 'HTTP/1.1',
+  HTTP_2: 'HTTP/2.0',
 } as const;
 
 /**
  * Common HTTP response strings
  */
 export const HTTP_RESPONSES = {
-    BAD_REQUEST: 'HTTP/1.1 400 Bad Request\r\n\r\n',
-    UNAUTHORIZED: 'HTTP/1.1 401 Unauthorized\r\n\r\n',
-    FORBIDDEN: 'HTTP/1.1 403 Forbidden\r\n\r\n',
-    NOT_FOUND: 'HTTP/1.1 404 Not Found\r\n\r\n',
-    INTERNAL_ERROR: 'HTTP/1.1 500 Internal Server Error\r\n\r\n',
+  BAD_REQUEST: 'HTTP/1.1 400 Bad Request\r\n\r\n',
+  UNAUTHORIZED: 'HTTP/1.1 401 Unauthorized\r\n\r\n',
+  FORBIDDEN: 'HTTP/1.1 403 Forbidden\r\n\r\n',
+  NOT_FOUND: 'HTTP/1.1 404 Not Found\r\n\r\n',
+  INTERNAL_ERROR: 'HTTP/1.1 500 Internal Server Error\r\n\r\n',
 } as const;

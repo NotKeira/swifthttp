@@ -1,14 +1,14 @@
-import { HttpMethod, Route, RouteHandler, Middleware } from "./types";
+import type { HttpMethod, Route, RouteHandler, Middleware } from './types';
 
 /**
  * Router class for better route organisation
  */
 export class Router {
   private readonly routes: Route[] = [];
-  private readonly prefix: string = "";
+  private readonly prefix: string = '';
   private readonly middleware: Middleware[] = [];
 
-  constructor(prefix: string = "") {
+  constructor(prefix: string = '') {
     this.prefix = prefix;
   }
 
@@ -24,7 +24,7 @@ export class Router {
    * Add GET route
    */
   get(path: string, handler: RouteHandler): this {
-    this.addRoute("GET", path, handler);
+    this.addRoute('GET', path, handler);
     return this;
   }
 
@@ -32,7 +32,7 @@ export class Router {
    * Add POST route
    */
   post(path: string, handler: RouteHandler): this {
-    this.addRoute("POST", path, handler);
+    this.addRoute('POST', path, handler);
     return this;
   }
 
@@ -40,7 +40,7 @@ export class Router {
    * Add DELETE route
    */
   delete(path: string, handler: RouteHandler): this {
-    this.addRoute("DELETE", path, handler);
+    this.addRoute('DELETE', path, handler);
     return this;
   }
 
@@ -48,7 +48,7 @@ export class Router {
    * Add PATCH route
    */
   patch(path: string, handler: RouteHandler): this {
-    this.addRoute("PATCH", path, handler);
+    this.addRoute('PATCH', path, handler);
     return this;
   }
 
@@ -83,13 +83,10 @@ export class Router {
   /**
    * Route parameter validation
    */
-  param(
-    name: string,
-    validator: (value: string) => boolean | Promise<boolean>
-  ): this {
+  param(name: string, validator: (value: string) => boolean | Promise<boolean>): this {
     // Store parameter validators for later use
     // This would be implemented in the main SwiftHTTP class
-    console.warn("Parameter validation not yet implemented");
+    console.warn('Parameter validation not yet implemented');
     return this;
   }
 }
