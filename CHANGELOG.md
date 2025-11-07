@@ -19,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Package.json scripts for development workflow
     - Added `typecheck` script for TypeScript validation without building
     - Added placeholder `lint` and `format` scripts for future ESLint/Prettier integration
+- Constants module for type-safe configuration values
+    - HTTP status codes enum with utility functions (isSuccessful, isClientError, etc.)
+    - HTTP methods enum with categorisation (safe methods, idempotent methods, etc.)
+    - HTTP header name constants to prevent typos (request, response, and security headers)
+    - MIME type constants for content negotiation and response headers
+    - Default configuration constants (ports, timeouts, limits, protocols)
+    - Error message and error code constants for consistent error handling
+    - Barrel export from `src/constants/` for convenient importing
 
 ### Changed
 
