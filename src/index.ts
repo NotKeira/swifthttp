@@ -3,18 +3,17 @@ import {createServer} from 'http';
 import type {
     ErrorContext,
     ErrorHandler,
-    HttpMethod,
     Middleware,
     ParamValidator,
+    Request,
+    Response,
     Route,
     RouteHandler,
     RouteInfo,
     ServerOptions,
-    SwiftError,
-    SwiftRequest,
-    SwiftResponse,
 } from './types';
-import type {ErrorReporter} from './utils';
+import {HttpMethod, DEFAULT_HOSTNAME, DEFAULT_PORT, DEFAULT_REQUEST_ID_LENGTH} from './constants';
+import type {ErrorReporter, HttpError} from './utils';
 import {
     ConsoleErrorReporter,
     createError,
@@ -22,11 +21,10 @@ import {
     enhanceRequest,
     enhanceResponse,
     logger,
-    normaliseError
+    normalizeError,
 } from './utils';
 // Pre-configured enhanced classes
 import {createSwiftHTTPWithDev, createSwiftHTTPWithEssentials, createSwiftHTTPWithProduction,} from './mixins';
-
 
 /**
  * SwiftHTTP - A lightweight, high-performance HTTP server with mixin support
@@ -41,7 +39,7 @@ export class SwiftHTTP {
 
     constructor(private options: ServerOptions = {}) {
         this.server = createServer((req, res) => {
-            this.handleRequest(req as SwiftRequest, res as SwiftResponse);
+            void this.handleRequest(req as Request, res as Response);
         });
 
         this.errorReporter = new ConsoleErrorReporter(
@@ -263,16 +261,15 @@ export class SwiftHTTP {
      * Start the server
      */
     listen(port?: number, hostname?: string, callback?: () => void): Server {
-        const finalPort = port ?? this.options.port ?? 3000;
-        const finalHostname = hostname ?? this.options.hostname ?? 'localhost';
+        const finalPort = port ?? this.options.port ?? DEFAULT_PORT;
+        const finalHostname = hostname ?? this.options.hostname ?? DEFAULT_HOSTNAME;
 
         return this.server.listen(finalPort, finalHostname, () => {
-            logger.info('Server started',
-                {
-                    hostname: finalHostname,
-                    port: finalPort,
-                    url: `http://${finalHostname}:${finalPort}`,
-                });
+            logger.info('Server started', {
+                hostname: finalHostname,
+                port: finalPort,
+                url: `http://${finalHostname}:${finalPort}`,
+            });
             if (callback) {
                 callback();
             }
@@ -286,7 +283,7 @@ export class SwiftHTTP {
         logger.info('Shutting down server');
         this.server.close((err) => {
             if (err) {
-                logger.error('Error during server shutdown', { error: err.message, stack: err.stack });
+                logger.error('Error during server shutdown', {error: err.message, stack: err.stack});
             } else {
                 logger.info('Server shut down successfully');
             }
@@ -319,14 +316,14 @@ export class SwiftHTTP {
     /**
      * Main request handler with comprehensive error handling
      */
-    private async handleRequest(req: SwiftRequest, res: SwiftResponse): Promise<void> {
+    private async handleRequest(req: Request, res: Response): Promise<void> {
         const startTime = Date.now();
 
         try {
             const enhancedReq = await enhanceRequest(req);
-            const enhancedRes = enhanceResponse(res);
+            const enhancedRes = await enhanceResponse(res) as Response;
 
-            (enhancedRes as any).req = enhancedReq;
+            enhancedRes.req = enhancedReq;
             enhancedReq.id = this.generateRequestId();
 
             const route = this.findRoute(enhancedReq.method as HttpMethod, enhancedReq.path);
@@ -387,20 +384,26 @@ export class SwiftHTTP {
         }
     }
 
-    private async executeHandler(
-        handler: RouteHandler,
-        req: SwiftRequest,
-        res: SwiftResponse
-    ): Promise<void> {
-        try {
-            await handler(req, res);
-        } catch (error) {
-            throw error;
-        }
+    private async executeHandler(handler: RouteHandler, req: Request, res: Response): Promise<void> {
+        await handler(req, res);
     }
 
+    /**
+     * Generate unique request identifier for tracing
+     *
+     * @description Creates a unique ID combining timestamp and random string
+     * for request tracing and debugging purposes.
+     *
+     * @returns Unique request ID in format: `req_<timestamp>_<random>`
+     *
+     * @example
+     * ```typescript
+     * generateRequestId(); // "req_1699368329123_a4f8k9d2x"
+     * ```
+     */
     private generateRequestId(): string {
-        return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const random = Math.random().toString(36).substring(2, 2 + DEFAULT_REQUEST_ID_LENGTH);
+        return `req_${Date.now()}_${random}`;
     }
 
     private findRoute(method: HttpMethod, path: string): Route | null {
@@ -417,8 +420,8 @@ export class SwiftHTTP {
 
     private async executeMiddleware(
         middlewares: Middleware[],
-        req: SwiftRequest,
-        res: SwiftResponse
+        req: Request,
+        res: Response
     ): Promise<void> {
         let index = 0;
 
@@ -435,7 +438,7 @@ export class SwiftHTTP {
             const middleware = middlewares[i];
             let nextCalled = false;
 
-            const next = () => {
+            const next = (): Promise<void> => {
                 if (nextCalled) {
                     throw new Error('next() called multiple times');
                 }
@@ -444,10 +447,6 @@ export class SwiftHTTP {
             };
 
             await middleware(req, res, next);
-
-            if (!nextCalled && !res.headersSent) {
-                return;
-            }
         };
 
         await dispatch(0);
@@ -455,11 +454,11 @@ export class SwiftHTTP {
 
     private async handleError(
         error: Error,
-        req: SwiftRequest,
-        res: SwiftResponse,
+        req: Request,
+        res: Response,
         startTime?: number
     ): Promise<void> {
-        const swiftError = normaliseError(error);
+        const httpError = normalizeError(error);
         const duration = startTime ? Date.now() - startTime : 0;
 
         const context: ErrorContext = {
@@ -471,7 +470,7 @@ export class SwiftHTTP {
         };
 
         try {
-            await this.errorReporter.report(swiftError, context);
+            await this.errorReporter.report(httpError, context);
         } catch (reportError) {
             logger.error('Error in error reporter', {
                 error: reportError instanceof Error ? reportError.message : String(reportError),
@@ -481,13 +480,13 @@ export class SwiftHTTP {
         try {
             if (this.errorHandlers.length > 0) {
                 for (const handler of this.errorHandlers) {
-                    await handler(swiftError, req, res, () => {
+                    await handler(httpError, req, res, () => {
                     });
                 }
             }
 
             if (this.globalErrorHandler) {
-                await this.globalErrorHandler(swiftError, req, res, () => {
+                await this.globalErrorHandler(httpError, req, res, () => {
                 });
             }
         } catch (handlerError) {
@@ -498,25 +497,30 @@ export class SwiftHTTP {
 
         if (!res.headersSent) {
             const isDevelopment = process.env.NODE_ENV !== 'production';
-            const errorResponse = this.formatErrorResponse(swiftError, req, isDevelopment);
+            const errorResponse = this.formatErrorResponse(httpError, req, isDevelopment);
 
-            errorResponse.requestId = (req as any).id;
+            const enhancedReq = req as Request;
+            errorResponse.requestId = enhancedReq.id;
             if (duration > 0) {
                 errorResponse.duration = `${duration}ms`;
             }
 
             res.setHeader('Content-Type', 'application/json');
 
-            if (swiftError.statusCode === 429 && swiftError.details?.retryAfter) {
-                res.setHeader('Retry-After', swiftError.details.retryAfter);
+            if (httpError.statusCode === 429 && httpError.details?.retryAfter) {
+                res.setHeader('Retry-After', httpError.details.retryAfter);
             }
 
-            res.writeHead(swiftError.statusCode);
+            res.writeHead(httpError.statusCode);
             res.end(JSON.stringify(errorResponse, null, isDevelopment ? 2 : 0));
         }
     }
 
-    private formatErrorResponse(error: SwiftError, req: SwiftRequest, isDevelopment: boolean): any {
+    private formatErrorResponse(
+        error: HttpError,
+        req: Request,
+        isDevelopment: boolean
+    ): Record<string, unknown> {
         const baseResponse = {
             error: error.message,
             status: error.statusCode,
@@ -539,7 +543,7 @@ export class SwiftHTTP {
             };
         }
 
-        const productionResponse: any = {
+        const productionResponse: Record<string, unknown> = {
             error: error.statusCode >= 500 ? 'Internal Server Error' : error.message,
             status: error.statusCode,
             timestamp: baseResponse.timestamp,
@@ -557,14 +561,9 @@ export class SwiftHTTP {
 export * from './types';
 export * from './middleware';
 export * from './mixins';
-export * from './utils/errors';
+export * from './utils';
 
-// Export middleware functions
-export {cors, logger, bodyParser, serveStatic, compose, negotiate, etag} from './middleware';
 
-// Export utilities
-export {enhanceRequest, enhanceResponse} from './utils/request';
-export {getMimeType, parseCookies, serialiseCookie} from './utils/response';
 
 export const SwiftHTTPEssential = createSwiftHTTPWithEssentials(SwiftHTTP);
 export const SwiftHTTPDev = createSwiftHTTPWithDev(SwiftHTTP);

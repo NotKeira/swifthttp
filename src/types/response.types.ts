@@ -117,7 +117,11 @@ export interface SecurityHeaders {
  *
  * @extends ServerResponse
  */
-export interface Response extends ServerResponse {
+export interface Response extends Omit<ServerResponse, 'req'> {
+    /**
+     * Reference to the request object
+     */
+    req: Request;
     /**
      * Send JSON response
      *

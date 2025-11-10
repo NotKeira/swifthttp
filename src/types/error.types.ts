@@ -29,16 +29,16 @@ export interface ErrorContext {
     /**
      * User agent string
      */
-    userAgent?: string;
+    userAgent?: string | undefined;
 
     /**
      * Client IP address
      */
-    ip?: string;
+    ip?: string | undefined;
 }
 
 /**
- * Custom HTTP error class
+ * HTTP error class
  *
  * @description Base error class for all HTTP errors with status codes
  * and structured error information.

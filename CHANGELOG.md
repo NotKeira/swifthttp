@@ -71,6 +71,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - SwiftError → HttpError
 - Improved type organization following file-per-system architecture
 - Split monolithic src/types/index.ts into focused, single-purpose files
+- **BREAKING**: Renamed core types for clarity and consistency
+    - `SwiftRequest` → `Request`
+    - `SwiftResponse` → `Response`
+    - `SwiftError` → `HttpError`
+- Replaced deprecated `String.substr()` with `substring()` throughout codebase
+- Normalized British English spellings to American English (`normalise` → `normalize`)
+- Improved type safety by removing `as any` type assertions
+- Enhanced async handling with explicit void operators
+- Replaced wildcard exports with explicit named exports for better tree-shaking
+
 ### Deprecated
 
 ### Removed
@@ -78,11 +88,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Direct console.log, console.error, and console.warn usage throughout codebase
     - Eliminates ESLint no-console warnings
     - Improves production log management and filtering
+
 ### Fixed
 
 - Corrected critical typo in package.json script: `prepublichOnly` → `prepublishOnly`
     - This fixes the npm publish lifecycle hook that runs before publishing to npm
     - Prevents accidental publication of unbuilt or invalid code
+- Response interface now properly overrides `ServerResponse.req` property with correct type
+- Request ID generation now uses named constants instead of magic numbers
 
 ### Security
 

@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'http';
 import { parse as parseUrl } from 'url';
-import type { SwiftRequest, SwiftResponse } from '../types';
+import type {Response} from '../types';
 
 /**
  * Parse limit strings like '1mb', '500kb', etc.
@@ -367,7 +367,7 @@ export async function enhanceRequest(
     raw?: boolean;
     multipart?: boolean;
   }
-): Promise<SwiftRequest> {
+): Promise<Request> {
   const { path, query } = parseRequest(req);
 
   let body: any = null;
@@ -390,7 +390,7 @@ export async function enhanceRequest(
     }
   }
 
-  const swiftReq = req as SwiftRequest;
+  const swiftReq = req as unknown as Request;
   swiftReq.path = path;
   swiftReq.query = query;
   swiftReq.body = body;
@@ -406,8 +406,8 @@ export async function enhanceRequest(
 /**
  * Enhanced response object
  */
-export async function enhanceResponse(res: ServerResponse): Promise<SwiftResponse> {
-  const swiftRes = res as SwiftResponse;
+export async function enhanceResponse(res: Response): Promise<Response> {
+  const swiftRes = res as Response;
   swiftRes.status = (statusCode: number) => {
     res.statusCode = statusCode;
     return swiftRes;
